@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>視力とPPI判別限界可視化ツール</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 24px;
+            background-color: white;
+            min-height: 100vh;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 2rem;
+            color: #1f2937;
+        }
+
+        .controls-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .control-panel {
+            background-color: #f9fafb;
+            padding: 1.5rem;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        .control-info {
+            min-width: 120px;
+            text-align: center;
+        }
+
+        .control-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #374151;
+        }
+
+        .value-display {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+
+        .slider-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .visual-acuity-value {
+            color: #2563eb;
+        }
+
+        .distance-value {
+            color: #059669;
+        }
+
+        .slider {
+            width: 100%;
+            height: 8px;
+            border-radius: 4px;
+            background: #e5e7eb;
+            outline: none;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+            cursor: pointer;
+        }
+
+        .slider:hover {
+            opacity: 1;
+        }
+
+        .slider::-webkit-slider-thumb {
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #2563eb;
+            cursor: pointer;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #2563eb;
+            cursor: pointer;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .slider-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 0.5rem;
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+
+        .result-panel {
+            background: linear-gradient(135deg, #dbeafe 0%, #dcfce7 100%);
+            padding: 2rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .result-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #1f2937;
+        }
+
+        .ppi-value {
+            font-size: 4rem;
+            font-weight: bold;
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            display: inline-block;
+        }
+
+        .result-description {
+            color: #4b5563;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .ppi-scale {
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .scale-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: #374151;
+        }
+
+        .scale-bar {
+            height: 48px;
+            background: linear-gradient(90deg, #ef4444 0%, #eab308 50%, #22c55e 100%);
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            position: relative;
+        }
+
+        .scale-marker {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: black;
+            border-radius: 2px;
+        }
+
+        .scale-marker-label {
+            position: absolute;
+            top: -32px;
+            left: -32px;
+            font-size: 0.875rem;
+            font-weight: bold;
+            color: black;
+            white-space: nowrap;
+        }
+
+        .scale-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+
+        .devices-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .device-card {
+            padding: 1rem;
+            border-radius: 8px;
+            border: 2px solid;
+        }
+
+        .device-good {
+            border-color: #22c55e;
+            background-color: #f0fdf4;
+        }
+
+        .device-bad {
+            border-color: #ef4444;
+            background-color: #fef2f2;
+        }
+
+        .device-name {
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        .device-ppi {
+            font-size: 1.125rem;
+            font-weight: bold;
+            margin: 0.5rem 0;
+        }
+
+        .device-status {
+            font-size: 0.875rem;
+        }
+
+        .device-status.good {
+            color: #16a34a;
+        }
+
+        .device-status.bad {
+            color: #dc2626;
+        }
+
+        .explanation-panel {
+            background-color: #dbeafe;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-top: 2rem;
+        }
+
+        .explanation-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            color: #1e40af;
+        }
+
+        .explanation-content {
+            font-size: 0.875rem;
+            color: #1e40af;
+        }
+
+        .explanation-content p {
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>視力とPPI判別限界可視化ツール</h1>
+        
+        <div class="controls-grid">
+            <div class="control-panel">
+                <div class="control-info">
+                    <h2 class="control-title">視力</h2>
+                    <div class="value-display">
+                        <span id="visual-acuity-display" class="visual-acuity-value">1.0</span>
+                    </div>
+                </div>
+                <div class="slider-container">
+                    <input type="range" id="visual-acuity-slider" class="slider" min="0.1" max="2.0" step="0.1" value="1.0">
+                    <div class="slider-labels">
+                        <span>0.1</span>
+                        <span>2.0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="control-panel">
+                <div class="control-info">
+                    <h2 class="control-title">距離</h2>
+                    <div class="value-display">
+                        <span id="distance-display" class="distance-value">50cm</span>
+                    </div>
+                </div>
+                <div class="slider-container">
+                    <input type="range" id="distance-slider" class="slider" min="0" max="100" step="1" value="50">
+                    <div class="slider-labels">
+                        <span>20cm</span>
+                        <span>1m</span>
+                        <span>10m</span>
+                        <span>50m</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="result-panel">
+            <h2 class="result-title">判別限界PPI</h2>
+            <div id="ppi-value" class="ppi-value">300 PPI</div>
+            <p id="result-description" class="result-description">
+                視力1.0で50cm離れた場合、<strong>300 PPI</strong>以上であれば個々のピクセルを判別できません
+            </p>
+        </div>
+
+        <div class="ppi-scale">
+            <h3 class="scale-title">PPIスケール</h3>
+            <div class="scale-bar">
+                <div id="scale-marker" class="scale-marker">
+                    <div class="scale-marker-label">現在: 300 PPI</div>
+                </div>
+            </div>
+            <div class="scale-labels">
+                <span>0 PPI</span>
+                <span>200 PPI</span>
+                <span>400 PPI</span>
+                <span>600 PPI</span>
+                <span>800+ PPI</span>
+            </div>
+        </div>
+
+        <div class="ppi-scale">
+            <h3 class="scale-title">一般的なデバイスとの比較</h3>
+            <div class="devices-grid" id="devices-grid">
+                <!-- デバイスカードはJavaScriptで動的に生成 -->
+            </div>
+        </div>
+
+        <div class="explanation-panel">
+            <h3 class="explanation-title">計算の仕組み</h3>
+            <div class="explanation-content">
+                <p>• 視力1.0 = 1分角（1/60度）の分解能</p>
+                <p>• 視力と分解能の関係：分解能 = 1 / 視力</p>
+                <p>• 距離と角度から最小判別可能な長さを計算</p>
+                <p>• PPI = 1インチあたりのピクセル数なので、1 / 最小判別長さ（インチ）</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 状態管理
+        let visualAcuity = 1.0;
+        let distanceSlider = 50;
+        let minPPI = 0;
+
+        // 一般的なデバイスのPPI値
+        const devices = [
+            { name: '低解像度モニター', ppi: 72 },
+            { name: 'スマートフォン', ppi: 326 },
+            { name: 'Retina Display', ppi: 264 },
+            { name: '4Kモニター', ppi: 163 },
+            { name: '高解像度印刷', ppi: 600 },
+        ];
+
+        // DOM要素の取得
+        const visualAcuitySlider = document.getElementById('visual-acuity-slider');
+        const distanceSliderEl = document.getElementById('distance-slider');
+        const visualAcuityDisplay = document.getElementById('visual-acuity-display');
+        const distanceDisplay = document.getElementById('distance-display');
+        const ppiValue = document.getElementById('ppi-value');
+        const resultDescription = document.getElementById('result-description');
+        const scaleMarker = document.getElementById('scale-marker');
+        const devicesGrid = document.getElementById('devices-grid');
+
+        // 対数スケールで距離を計算
+        function getDistanceFromSlider(sliderValue) {
+            const minLog = Math.log(20);
+            const maxLog = Math.log(5000);
+            const scale = (maxLog - minLog) / 100;
+            return Math.exp(minLog + scale * sliderValue);
+        }
+
+        // PPIレベルに基づく色分け
+        function getPPIColor(ppi) {
+            if (ppi < 100) return '#ef4444';
+            if (ppi < 200) return '#f97316';
+            if (ppi < 300) return '#eab308';
+            if (ppi < 400) return '#84cc16';
+            return '#22c55e';
+        }
+
+        // 距離表示のフォーマット
+        function formatDistance(distance) {
+            return distance >= 100 ? `${(distance / 100).toFixed(1)}m` : `${Math.round(distance)}cm`;
+        }
+
+        // PPI計算
+        function calculateMinPPI() {
+            const distance = getDistanceFromSlider(distanceSlider);
+            
+            // 視力1.0 = 1分角(1/60度)の分解能
+            const resolutionArcMin = 1 / visualAcuity;
+            
+            // 分角をラジアンに変換
+            const resolutionRad = (resolutionArcMin / 60) * (Math.PI / 180);
+            
+            // 距離(cm)での最小判別可能な長さ
+            const minDiscernibleLength = distance * Math.tan(resolutionRad);
+            
+            // 1インチ = 2.54cm
+            const minDiscernibleLengthInches = minDiscernibleLength / 2.54;
+            
+            // PPI = 1 / 最小判別可能長さ(インチ)
+            minPPI = 1 / minDiscernibleLengthInches;
+            
+            return minPPI;
+        }
+
+        // UI更新
+        function updateUI() {
+            const distance = getDistanceFromSlider(distanceSlider);
+            const ppi = calculateMinPPI();
+            
+            // 表示値の更新
+            visualAcuityDisplay.textContent = visualAcuity.toFixed(1);
+            distanceDisplay.textContent = formatDistance(distance);
+            ppiValue.textContent = `${Math.round(ppi)} PPI`;
+            ppiValue.style.backgroundColor = getPPIColor(ppi);
+            
+            // 結果説明の更新
+            resultDescription.innerHTML = `
+                視力${visualAcuity.toFixed(1)}で${formatDistance(distance)}離れた場合、
+                <strong style="color: #2563eb">${Math.round(ppi)} PPI</strong>
+                以上であれば個々のピクセルを判別できません
+            `;
+            
+            // スケールマーカーの更新
+            const markerPosition = Math.min((ppi / 800) * 100, 100);
+            scaleMarker.style.left = `${markerPosition}%`;
+            scaleMarker.querySelector('.scale-marker-label').textContent = `現在: ${Math.round(ppi)} PPI`;
+            
+            // デバイス比較の更新
+            updateDevicesGrid(ppi);
+        }
+
+        // デバイスグリッドの更新
+        function updateDevicesGrid(currentPPI) {
+            devicesGrid.innerHTML = '';
+            
+            devices.forEach(device => {
+                const isGood = device.ppi >= currentPPI;
+                const card = document.createElement('div');
+                card.className = `device-card ${isGood ? 'device-good' : 'device-bad'}`;
+                
+                card.innerHTML = `
+                    <div class="device-name">${device.name}</div>
+                    <div class="device-ppi">${device.ppi} PPI</div>
+                    <div class="device-status ${isGood ? 'good' : 'bad'}">
+                        ${isGood ? '✓ 判別不可' : '✗ 判別可能'}
+                    </div>
+                `;
+                
+                devicesGrid.appendChild(card);
+            });
+        }
+
+        // イベントリスナーの設定
+        visualAcuitySlider.addEventListener('input', (e) => {
+            visualAcuity = parseFloat(e.target.value);
+            updateUI();
+        });
+
+        distanceSliderEl.addEventListener('input', (e) => {
+            distanceSlider = parseFloat(e.target.value);
+            updateUI();
+        });
+
+        // 初期表示
+        updateUI();
+    </script>
+</body>
+</html>
